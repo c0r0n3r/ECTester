@@ -296,7 +296,6 @@ Currently supported libraries include:
  - [Botan](https://botan.randombit.net/)
  - [Microsoft CNG](https://msdn.microsoft.com/en-us/library/windows/desktop/aa376210(v=vs.85).aspx)
  - [Intel Performance Primitives Crypto](https://github.com/intel/ipp-crypto)
- - [MatrixSSL](https://github.com/matrixssl/matrixssl)
  - [MbedTLS](https://github.com/ARMmbed/mbedtls)
  - [Nettle](https://www.lysator.liu.se/~nisse/nettle/)
  - [LibreSSL](https://www.libressl.org/)
@@ -332,14 +331,12 @@ cp ../../../../../../../ext/boringssl/build/crypto/libcrypto.so lib_boringssl.so
 cc  -fPIC -I"/usr/lib/jvm/java-8-openjdk/include" -I"/usr/lib/jvm/java-8-openjdk/include/linux" -I. -O2 -c gcrypt.c
 cc -fPIC -I"/usr/lib/jvm/java-8-openjdk/include" -I"/usr/lib/jvm/java-8-openjdk/include/linux" -I. -O2 -c mbedtls.c
 cc -fPIC -I"/usr/lib/jvm/java-8-openjdk/include" -I"/usr/lib/jvm/java-8-openjdk/include/linux" -I. -O2 -c ippcp.c
-cc -fPIC -I"/usr/lib/jvm/java-8-openjdk/include" -I"/usr/lib/jvm/java-8-openjdk/include/linux" -I. -O2 -Imatrixssl/ -c matrixssl.c
 cc -fPIC -shared -O2 -o tomcrypt_provider.so -Wl,-rpath,'$ORIGIN/lib' tomcrypt.o c_utils.o -L. -ltommath -L/usr/local/lib -ltomcrypt  -l:lib_timing.so
 cc -fPIC -shared -O2 -o openssl_provider.so -Wl,-rpath,'$ORIGIN/lib' openssl.o c_utils.o -L. -lssl -lcrypto  -l:lib_timing.so
 cc -fPIC -shared -O2 -o boringssl_provider.so -Wl,-rpath,'$ORIGIN/lib' boringssl.o c_utils.o -L. lib_boringssl.so -l:lib_timing.so
 cc -fPIC -shared -O2 -o gcrypt_provider.so -Wl,-rpath,'$ORIGIN/lib' gcrypt.o c_utils.o -L. -lgcrypt -lgpg-error -l:lib_timing.so
 cc -fPIC -shared -O2 -o mbedtls_provider.so -Wl,-rpath,'$ORIGIN/lib' mbedtls.o c_utils.o -L. -lmbedcrypto -l:lib_timing.so
 cc -fPIC -shared -O2 -o ippcp_provider.so -Wl,-rpath,'$ORIGIN/lib' ippcp.o c_utils.o -L. -lippcp -l:lib_timing.so
-cc -fPIC -shared -O2 -o matrixssl_provider.so -Wl,-rpath,'$ORIGIN/lib' -L. matrixssl.o c_utils.o libcrypt_s.a libcore_s.a -l:lib_timing.so
 g++ -fPIC -shared -O2 -o botan_provider.so -Wl,-rpath,'$ORIGIN/lib' botan.o cpp_utils.o -L. -lbotan-2 -fstack-protector -m64 -pthread  -l:lib_timing.so
 g++ -fPIC -shared -O2 -o cryptopp_provider.so -Wl,-rpath,'$ORIGIN/lib' cryptopp.o cpp_utils.o -L. -L/usr/local/lib -lcryptopp  -l:lib_timing.so
 ```
@@ -481,14 +478,6 @@ Snippet below shows how the `list-libs` command for well, listing currently supp
 		- KeyAgreements: ECDH
 		- Signatures: NONEwithECDSA
 		- Curves: secp112r1, secp112r2, secp128r1, secp128r2, secp160r1, secp160r2, secp192r1, secp224r1, secp256r1, secp384r1, secp521r1
-
-	- MatrixSSL
-		- Version: 4.100000
-		- Supports native timing: [cputime-processor, cputime-thread, monotonic, monotonic-raw, rdtsc]
-		- KeyPairGenerators: EC
-		- KeyAgreements: ECDH
-		- Signatures: NONEwithECDSA
-		- Curves: brainpoolP224r1, brainpoolP256r1, brainpoolP384r1, brainpoolP512r1, secp192r1, secp224r1, secp256r1, secp384r1, secp521r1
 ```
 
 Snippet below demonstrates generation of 1000 (`-n`) keys on the named curve `secp256r1` (`-nc`) using the BouncyCastle library.
@@ -502,18 +491,6 @@ index;time[nano];pubW;privS
 4;1190134;043495f79ae0d6ef885ea4229da46b07aedd10bf7646f91fc7ccdce1f24839e7323e101cdd4acd90e8deb023faf324c1d8cb37421df38f268d28bc83a39297ee0b;6effde3b884f22ecd6e8dbe01e90c80587be9fa7fe39a0293e34c9254efb1210
 5;858219;0472197b8c6622a1715e7a3cbb4e2fcdb58448880b35f65295c68992a2646904619d85f87896aeefdd1704d04a9f0956f5bd4c6147f01b1fdc0dbd1d82d9554c4a;73c2d2f87f83d8f568d4173b98eab8e9ded2e17a9561cd194adcbb3d139242d0
 6;873804;04829646ac5dbf5324c217a0d24239e33bfd4680634ae70fc27a9884f38b4eac04416c5127eec915993fc4d89076e7540bc973644c0ba2b5a509386734693daf9b;7dd1eccbe8919fe3dd7612fb22fa5fd060f6cb40e0abdc0f9f977e1f949f9ca6
-...
-```
-
-Snippet below demonstrates performing 10 ECDSA signatures, without hashing the message (`-t NONEwithECDSA`) on the `secp256r1` curve, with a fixed keypair throught the process (`--fixed`), utilizing the rdtsc instruction to measure duration (`--time-source`) and using the MatrixSSL library.
-```
-> java -jar ECTesterStandalone.jar ecdsa -n 10 -t NONEwithECDSA -nc secg/secp256r1 --fixed --time-source rdtsc Matrix
-index;signTime[instr];verifyTime[instr];data;pubW;privS;signature[NONE];nonce;verified
-0;6785333;18200703;24b064ff5a4d08df6f982d0e139677fb4e66602bea01e381e16d4d3614fd09d5;0429ef9b52fc5c9b8711c938820f4d15d6aab1dcd8aa5a80e754233f23c622a5a174cca795068aff9c979bff7e6f1345b529612a4d16df6adf56b8ac250a1fafc3;54d06d1a79b2b43dc072b96ca7b9f045fda84ac13f74ef81fab0d561a47d11d1;3045022070ca3dfe2017892d23a2301b2465ab387af7999c79de7dae53ec04d1600a25800221009fc9a6fe20c7930b9d8be40424ab4b08fa641f339efa81e6ccf5497cd71180f0;57ebf83913734ff0a78fa952da12996c48da17fbcf5967e74eb3e2c6b5e726b1;1
-1;8582180;16170010;24b064ff5a4d08df6f982d0e139677fb4e66602bea01e381e16d4d3614fd09d5;0429ef9b52fc5c9b8711c938820f4d15d6aab1dcd8aa5a80e754233f23c622a5a174cca795068aff9c979bff7e6f1345b529612a4d16df6adf56b8ac250a1fafc3;54d06d1a79b2b43dc072b96ca7b9f045fda84ac13f74ef81fab0d561a47d11d1;3045022100efd3efc1bb2ed243eec9bea4bc331966e869c02df1fc8686a7649708c106595a022050e9a2548bac56bb3287f27c1761136947eefaa8a92f31978ed9485a03cb8f3d;0f5d3cc25d3eb69177b7917631f5639a088773873e91c1adb0a2b753987cace8;1
-2;14906610;28661375;24b064ff5a4d08df6f982d0e139677fb4e66602bea01e381e16d4d3614fd09d5;0429ef9b52fc5c9b8711c938820f4d15d6aab1dcd8aa5a80e754233f23c622a5a174cca795068aff9c979bff7e6f1345b529612a4d16df6adf56b8ac250a1fafc3;54d06d1a79b2b43dc072b96ca7b9f045fda84ac13f74ef81fab0d561a47d11d1;3044022012ff4f949d1957c160ffdf5e53e6d3925c464954a79df2a613360e9513f647f5022001c337de39c78d16db21ee061a7f85cdd52a249570b59ef3f6c43f94a494a3a7;01525f491f4173281eb2f23877d816aa20f77f25ef87c9241dc130c2b862f923;1
-3;14364756;17223863;24b064ff5a4d08df6f982d0e139677fb4e66602bea01e381e16d4d3614fd09d5;0429ef9b52fc5c9b8711c938820f4d15d6aab1dcd8aa5a80e754233f23c622a5a174cca795068aff9c979bff7e6f1345b529612a4d16df6adf56b8ac250a1fafc3;54d06d1a79b2b43dc072b96ca7b9f045fda84ac13f74ef81fab0d561a47d11d1;3046022100ddad3254d04df6914b886275b1d01939ea64481fba8bea2c4b3eac611ef3ce4a022100ca7702d7d1bea15bf7c8e77da9421e053e6b2235e3390fdcc0b60a69dc5cbc16;00810fe33ddc3dcee687f6310394c2f326d6024103e0b5dca97ddd157bb9d82721;1
-4;8211882;14507032;24b064ff5a4d08df6f982d0e139677fb4e66602bea01e381e16d4d3614fd09d5;0429ef9b52fc5c9b8711c938820f4d15d6aab1dcd8aa5a80e754233f23c622a5a174cca795068aff9c979bff7e6f1345b529612a4d16df6adf56b8ac250a1fafc3;54d06d1a79b2b43dc072b96ca7b9f045fda84ac13f74ef81fab0d561a47d11d1;3046022100ae041e36e82c8f5d96f93beabb7bdfd070f88426b2b19ce53dea42f19a493500022100b20e409621effb91c92f79e3a125c02c16bdea3bbc6b690c47af8d87ff9994cf;54396537f7426576a6a0ba71bef63c5a1400b6baec9684807180696cb619ae5a;1
 ...
 ```
 
